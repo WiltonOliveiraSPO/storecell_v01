@@ -1,11 +1,10 @@
 package view;
 
-import model.Servico;
-import dao.ServicoDAO;
 import dao.DBConnection;
+import dao.ServicoDAO;
+import model.Servico;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.Connection;
@@ -14,150 +13,263 @@ import java.util.List;
 
 public class FrmServico extends JFrame {
 
-    private JTextField txtId, txtNome, txtPreco;
-    private JTable tabela;
-    private DefaultTableModel modelo;
+    private JTextField txtId, txtNome, txtValor;
+    private JTextArea txtDescricao;
+    private JCheckBox chkAtivo;
+
+    private JButton btnPrimeiro, btnAnterior, btnProximo, btnUltimo;
+    private JButton btnNovo, btnEditar, btnExcluir, btnSalvar, btnCancelar;
+
     private ServicoDAO dao;
+    private List<Servico> lista;
+    private int pos = 0;
+
+    private boolean editMode = false;
+    private boolean newRecord = false;
 
     public FrmServico() {
-
         setTitle("Cadastro de Serviços");
-        setSize(700, 500);
+        setSize(600, 450);
         setLocationRelativeTo(null);
-        setLayout(null);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+        setLayout(new BorderLayout());
 
+        // ==============================
+        //  1) Conexão + DAO
+        // ==============================
         try {
             Connection conn = DBConnection.getConnection();
             dao = new ServicoDAO(conn);
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Erro ao conectar: " + e.getMessage());
-        }
-
-        JLabel lblId = new JLabel("ID:");
-        lblId.setBounds(20, 20, 30, 25);
-        add(lblId);
-
-        txtId = new JTextField();
-        txtId.setBounds(60, 20, 80, 25);
-        txtId.setEditable(false);
-        add(txtId);
-
-        JLabel lblNome = new JLabel("Nome:");
-        lblNome.setBounds(20, 60, 80, 25);
-        add(lblNome);
-
-        txtNome = new JTextField();
-        txtNome.setBounds(80, 60, 250, 25);
-        add(txtNome);
-
-        JLabel lblPreco = new JLabel("Preço:");
-        lblPreco.setBounds(20, 100, 80, 25);
-        add(lblPreco);
-
-        txtPreco = new JTextField();
-        txtPreco.setBounds(80, 100, 100, 25);
-        add(txtPreco);
-
-        // Botões
-        JButton btnSalvar = new JButton("Salvar");
-        btnSalvar.setBounds(20, 150, 90, 30);
-        add(btnSalvar);
-
-        JButton btnLimpar = new JButton("Limpar");
-        btnLimpar.setBounds(120, 150, 90, 30);
-        add(btnLimpar);
-
-        JButton btnExcluir = new JButton("Excluir");
-        btnExcluir.setBounds(220, 150, 90, 30);
-        add(btnExcluir);
-
-        // Tabela
-        modelo = new DefaultTableModel(new Object[]{"ID", "Nome", "Preço"}, 0);
-        tabela = new JTable(modelo);
-        JScrollPane scroll = new JScrollPane(tabela);
-        scroll.setBounds(20, 200, 640, 240);
-        add(scroll);
-
-        listarServicos();
-
-        // Eventos
-        btnSalvar.addActionListener(e -> salvar());
-        btnLimpar.addActionListener(e -> limpar());
-        btnExcluir.addActionListener(e -> excluir());
-
-        tabela.addMouseListener(new MouseAdapter() {
-            public void mouseClicked(MouseEvent e) {
-                carregarCampos();
-            }
-        });
-    }
-
-    private void salvar() {
-        try {
-            Servico s = new Servico();
-
-            if (!txtId.getText().isEmpty()) {
-                s.setId(Integer.parseInt(txtId.getText()));
-            }
-
-            s.setNome(txtNome.getText());
-            s.setPreco(Double.parseDouble(txtPreco.getText()));
-
-            if (txtId.getText().isEmpty()) {
-                dao.inserir(s);
-            } else {
-                dao.atualizar(s);
-            }
-
-            listarServicos();
-            limpar();
-            JOptionPane.showMessageDialog(this, "Serviço salvo!");
-
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage());
-        }
-    }
-
-    private void excluir() {
-        if (txtId.getText().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Selecione um serviço!");
+            JOptionPane.showMessageDialog(this,
+                "Erro ao conectar ao banco: " + e.getMessage(),
+                "Erro crítico",
+                JOptionPane.ERROR_MESSAGE);
+            dispose();
             return;
         }
 
-        try {
-            dao.excluir(Integer.parseInt(txtId.getText()));
-            listarServicos();
-            limpar();
-            JOptionPane.showMessageDialog(this, "Serviço excluído!");
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage());
-        }
+        initComponents();
+        loadData();
+
+        setVisible(true);
     }
 
-    private void listarServicos() {
-        try {
-            modelo.setRowCount(0);
-            List<Servico> lista = dao.listar();
+    private void initComponents() {
 
-            for (Servico s : lista) {
-                modelo.addRow(new Object[]{s.getId(), s.getNome(), s.getPreco()});
+        JPanel panelCampos = new JPanel(new GridBagLayout());
+        panelCampos.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        GridBagConstraints c = new GridBagConstraints();
+        c.insets = new Insets(5,5,5,5);
+        c.fill = GridBagConstraints.HORIZONTAL;
+
+        JLabel lblId = new JLabel("ID:");
+        JLabel lblNome = new JLabel("Nome:");
+        JLabel lblValor = new JLabel("Valor (R$):");
+        JLabel lblDescricao = new JLabel("Descrição:");
+        JLabel lblAtivo = new JLabel("Ativo:");
+
+        txtId = new JTextField(10);
+        txtId.setEditable(false);
+
+        txtNome = new JTextField(30);
+        txtValor = new JTextField(10);
+
+        txtDescricao = new JTextArea(4, 30);
+        txtDescricao.setLineWrap(true);
+        txtDescricao.setWrapStyleWord(true);
+
+        chkAtivo = new JCheckBox();
+
+        // linha 1
+        c.gridx = 0; c.gridy = 0; panelCampos.add(lblId, c);
+        c.gridx = 1; panelCampos.add(txtId, c);
+
+        // linha 2
+        c.gridx = 0; c.gridy = 1; panelCampos.add(lblNome, c);
+        c.gridx = 1; panelCampos.add(txtNome, c);
+
+        // linha 3
+        c.gridx = 0; c.gridy = 2; panelCampos.add(lblValor, c);
+        c.gridx = 1; panelCampos.add(txtValor, c);
+
+        // linha 4
+        c.gridx = 0; c.gridy = 3; panelCampos.add(lblDescricao, c);
+        c.gridx = 1; 
+        panelCampos.add(new JScrollPane(txtDescricao), c);
+
+        // linha 5
+        c.gridx = 0; c.gridy = 4; panelCampos.add(lblAtivo, c);
+        c.gridx = 1; panelCampos.add(chkAtivo, c);
+
+        add(panelCampos, BorderLayout.CENTER);
+
+        // ==============================
+        //  2) BOTÕES
+        // ==============================
+        JPanel panelBtns = new JPanel(new FlowLayout());
+
+        btnPrimeiro = new JButton("|<");
+        btnAnterior = new JButton("<");
+        btnProximo = new JButton(">");
+        btnUltimo = new JButton(">|");
+
+        btnNovo = new JButton("+");
+        btnEditar = new JButton("✏");
+        btnExcluir = new JButton("🗑");
+        btnSalvar = new JButton("💾");
+        btnCancelar = new JButton("🚫");
+
+        panelBtns.add(btnPrimeiro);
+        panelBtns.add(btnAnterior);
+        panelBtns.add(btnProximo);
+        panelBtns.add(btnUltimo);
+
+        panelBtns.add(btnNovo);
+        panelBtns.add(btnEditar);
+        panelBtns.add(btnExcluir);
+        panelBtns.add(btnSalvar);
+        panelBtns.add(btnCancelar);
+
+        add(panelBtns, BorderLayout.SOUTH);
+
+        // ações
+        btnPrimeiro.addActionListener(e -> mostrarRegistro(0));
+        btnAnterior.addActionListener(e -> { if (pos > 0) mostrarRegistro(pos - 1); });
+        btnProximo.addActionListener(e -> { if (pos < lista.size() - 1) mostrarRegistro(pos + 1); });
+        btnUltimo.addActionListener(e -> mostrarRegistro(lista.size() - 1));
+
+        btnNovo.addActionListener(e -> novoRegistro());
+        btnEditar.addActionListener(e -> editarRegistro());
+        btnExcluir.addActionListener(e -> excluirRegistro());
+        btnSalvar.addActionListener(e -> salvarRegistro());
+        btnCancelar.addActionListener(e -> cancelarEdicao());
+
+        setEditMode(false);
+    }
+
+    // ==============================
+    // Carregar dados
+    // ==============================
+    private void loadData() {
+        try {
+            lista = dao.listar();
+            if (!lista.isEmpty()) {
+                mostrarRegistro(0);
             }
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Erro ao listar: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Erro ao carregar serviços: " + e.getMessage());
         }
     }
 
-    private void limpar() {
-        txtId.setText("");
-        txtNome.setText("");
-        txtPreco.setText("");
+    private void mostrarRegistro(int index) {
+        if (lista == null || lista.isEmpty()) return;
+
+        pos = index;
+        Servico s = lista.get(pos);
+
+        txtId.setText(String.valueOf(s.getId()));
+        txtNome.setText(s.getNome());
+        txtValor.setText(String.valueOf(s.getValor()));
+        txtDescricao.setText(s.getDescricao());
+        //chkAtivo.setSelected(s.isAtivo());
     }
 
-    private void carregarCampos() {
-        int row = tabela.getSelectedRow();
-        txtId.setText(modelo.getValueAt(row, 0).toString());
-        txtNome.setText(modelo.getValueAt(row, 1).toString());
-        txtPreco.setText(modelo.getValueAt(row, 2).toString());
+    // ==============================
+    // Controle de edição
+    // ==============================
+    private void setEditMode(boolean flag) {
+        editMode = flag;
+
+        txtNome.setEditable(flag);
+        txtValor.setEditable(flag);
+        txtDescricao.setEditable(flag);
+        chkAtivo.setEnabled(flag);
+
+        btnSalvar.setEnabled(flag);
+        btnCancelar.setEnabled(flag);
+
+        btnNovo.setEnabled(!flag);
+        btnEditar.setEnabled(!flag);
+        btnExcluir.setEnabled(!flag);
+
+        btnPrimeiro.setEnabled(!flag);
+        btnAnterior.setEnabled(!flag);
+        btnProximo.setEnabled(!flag);
+        btnUltimo.setEnabled(!flag);
     }
+
+    private void novoRegistro() {
+        newRecord = true;
+        setEditMode(true);
+
+        txtId.setText("");
+        txtNome.setText("");
+        txtValor.setText("");
+        txtDescricao.setText("");
+        chkAtivo.setSelected(true);
+
+        txtNome.requestFocus();
+    }
+
+    private void editarRegistro() {
+        if (lista.isEmpty()) return;
+        newRecord = false;
+        setEditMode(true);
+    }
+
+    private void excluirRegistro() {
+        if (lista.isEmpty()) return;
+
+        int r = JOptionPane.showConfirmDialog(this,
+                "Deseja realmente excluir este serviço?",
+                "Confirmação",
+                JOptionPane.YES_NO_OPTION);
+
+        if (r == JOptionPane.YES_OPTION) {
+            try {
+                dao.excluir(lista.get(pos).getId());
+                loadData();
+                JOptionPane.showMessageDialog(this, "Serviço excluído.");
+            } catch (SQLException e) {
+                JOptionPane.showMessageDialog(this, "Erro ao excluir: " + e.getMessage());
+            }
+        }
+    }
+
+    private void salvarRegistro() {
+        try {
+
+            Servico s = new Servico();
+            s.setNome(txtNome.getText());
+            s.setValor(Double.parseDouble(txtValor.getText()));
+            s.setDescricao(txtDescricao.getText());
+            //s.setAtivo(chkAtivo.isSelected());
+
+            if (newRecord) {
+                dao.inserir(s);
+                JOptionPane.showMessageDialog(this, "Serviço cadastrado!");
+            } else {
+                s.setId(Integer.parseInt(txtId.getText()));
+                dao.atualizar(s);
+                JOptionPane.showMessageDialog(this, "Serviço atualizado!");
+            }
+
+            loadData();
+            setEditMode(false);
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Erro ao salvar: " + e.getMessage());
+        }
+    }
+
+    private void cancelarEdicao() {
+        setEditMode(false);
+        if (!lista.isEmpty()) mostrarRegistro(pos);
+    }
+
+	public void carregarServico(int servicoId) {
+		// TODO Auto-generated method stub
+		
+	}
 }

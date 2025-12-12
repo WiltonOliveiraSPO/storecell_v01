@@ -207,4 +207,28 @@ public class FrmProduto extends JFrame {
         txtEstoque.setText(String.valueOf(p.getQuantidadeEstoque()));
         txtCodigoBarras.setText(p.getCodigoBarras());
     }
+    
+ // dentro da classe FrmProdutos
+    public void carregarProduto(int produtoId) {
+        try {
+            Connection conn = DBConnection.getConnection();
+            ProdutoDAO dao = new ProdutoDAO(conn);
+            Produto p = dao.buscarPorId(produtoId); // implemente buscarPorId se necessário
+
+            if (p != null) {
+                txtId.setText(String.valueOf(p.getProdutoId()));
+                txtNome.setText(p.getNome());
+                txtDescricao.setText(p.getDescricao());
+                txtPrecoCusto.setText(String.valueOf(p.getPrecoCusto()));
+                txtPrecoVenda.setText(String.valueOf(p.getPrecoVenda()));
+                txtEstoque.setText(String.valueOf(p.getQuantidadeEstoque()));
+                txtCodigoBarras.setText(p.getCodigoBarras());
+            } else {
+                JOptionPane.showMessageDialog(this, "Produto não encontrado!");
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Erro ao carregar produto: " + e.getMessage());
+        }
+    }
+
 }

@@ -37,17 +37,18 @@ public class FrmPrincipal extends JFrame {
 
         JMenuItem itemProdutos = new JMenuItem("Produtos");
         itemProdutos.addActionListener(e -> {
-			try {
-				new FrmProduto().setVisible(true);
-			} catch (SQLException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-		});
+            try {
+                new FrmProduto().setVisible(true);
+            } catch (SQLException e1) {
+                e1.printStackTrace();
+            }
+        });
         menuCadastro.add(itemProdutos);
 
         JMenuItem itemServicos = new JMenuItem("Serviços");
-        itemServicos.addActionListener(e -> new FrmServico().setVisible(true));
+        itemServicos.addActionListener(e -> {
+			new FrmServico().setVisible(true);
+		});
         menuCadastro.add(itemServicos);
 
         // ORDENS DE REPARO
@@ -57,30 +58,34 @@ public class FrmPrincipal extends JFrame {
 
         menuBar.add(menuCadastro);
 
+
         // ===== MENU VENDAS =====
         JMenu menuVendas = new JMenu("Vendas");
 
         JMenuItem itemNovaVenda = new JMenuItem("Nova Venda");
-
-        // >>> Ação que estava faltando <<<
         itemNovaVenda.addActionListener(e -> new FrmNovaVenda().setVisible(true));
-
         menuVendas.add(itemNovaVenda);
+
         menuBar.add(menuVendas);
+
 
         // ===== MENU CONSULTAS =====
         JMenu menuConsultas = new JMenu("Consultas");
 
         JMenuItem consClientes = new JMenuItem("Clientes");
+        consClientes.addActionListener(e -> new FrmConsultaClientes().setVisible(true));
         menuConsultas.add(consClientes);
 
         JMenuItem consProdutos = new JMenuItem("Produtos");
+        consProdutos.addActionListener(e -> new FrmConsultaProdutos().setVisible(true));
         menuConsultas.add(consProdutos);
 
         JMenuItem consServicos = new JMenuItem("Serviços");
+        consServicos.addActionListener(e -> new FrmConsultaServicos().setVisible(true));
         menuConsultas.add(consServicos);
 
         menuBar.add(menuConsultas);
+
 
         // ===== MENU RELATÓRIOS =====
         JMenu menuRelatorios = new JMenu("Relatórios");
@@ -92,6 +97,7 @@ public class FrmPrincipal extends JFrame {
         menuRelatorios.add(relVendasServicos);
 
         menuBar.add(menuRelatorios);
+
 
         // ===== MENU SAIR =====
         JMenu menuSair = new JMenu("Sair");

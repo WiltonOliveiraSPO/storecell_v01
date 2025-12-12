@@ -338,4 +338,27 @@ public class FrmClientes extends JFrame {
             new FrmClientes().setVisible(true);
         });
     }
+    
+    public void carregarCliente(int clienteId) {
+        try {
+            ClienteDAO dao = new ClienteDAO();
+            Cliente c = dao.buscarPorId(clienteId);
+
+            if (c != null) {
+                txtId.setText(String.valueOf(c.getClienteId()));
+                txtNome.setText(c.getNome());
+                txtTelefone.setText(c.getTelefone());
+                txtEmail.setText(c.getEmail());
+                txtCpf.setText(c.getCpf());
+                //txtDataCadastro.setText(String.valueOf(c.getDataCadastro()));
+
+            } else {
+                JOptionPane.showMessageDialog(this, "Cliente não encontrado!");
+            }
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Erro ao carregar cliente: " + e.getMessage());
+        }
+    }
+
 }
