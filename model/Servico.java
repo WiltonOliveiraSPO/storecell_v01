@@ -2,17 +2,24 @@ package model;
 
 public class Servico {
 
-    private int id;
-    private String nome;
-    private double preco;
+    private int id;                     // servico_id
+    private String nome;                // nome
+    private String descricao;           // descricao
+    private double valor;               // valor (decimal 10,2)
+    private double tempoEstimadoHoras;  // tempo_estimado_horas (decimal 5,2)
 
-    public Servico() {}
+    public Servico() {
+    }
 
-    public Servico(int id, String nome, double preco) {
+    public Servico(int id, String nome, String descricao, double valor, double tempoEstimadoHoras) {
         this.id = id;
         this.nome = nome;
-        this.preco = preco;
+        this.descricao = descricao;
+        this.valor = valor;
+        this.tempoEstimadoHoras = tempoEstimadoHoras;
     }
+
+    // Getters e Setters
 
     public int getId() {
         return id;
@@ -30,11 +37,27 @@ public class Servico {
         this.nome = nome;
     }
 
-    public double getPreco() {
-        return preco;
+    public String getDescricao() {
+        return descricao;
     }
 
-    public void setPreco(double preco) {
-        this.preco = preco;
+    public void setDescricao(String descricao) {
+        this.descricao = descricao;
+    }
+
+    public double getValor() {
+        return valor;
+    }
+
+    public void setValor(double valor) {
+        this.valor = valor;
+    }
+
+    public double getTempoEstimadoHoras() {
+        return tempoEstimadoHoras;
+    }
+
+    public void setTempoEstimadoHoras(double tempoEstimadoHoras) {
+        this.tempoEstimadoHoras = tempoEstimadoHoras;
     }
 }
