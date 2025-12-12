@@ -1,10 +1,12 @@
 package dao;
 
 import model.OrdemReparo;
+import model.RelatorioOrdem;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.*;
 
 public class OrdemReparoDAO {
 
@@ -93,4 +95,37 @@ public class OrdemReparoDAO {
         stmt.close();
         return lista;
     }
+    
+ // importe model.RelatorioOrdem e java.util.*
+    public List<RelatorioOrdem> listarPorStatus(String statusFiltro) throws SQLException {
+        String sql =
+          "SELECT o.ordem_id, c.nome AS cliente_nome, s.nome AS servico_nome, " +
+          "o.dispositivo_modelo, o.status, o.valor_total, o.data_entrada " +
+          "FROM ordens_reparo o " +
+          "LEFT JOIN clientes c ON o.cliente_id = c.cliente_id " +
+          "LEFT JOIN servicos s ON o.servico_id = s.servico_id " +
+          "WHERE o.status = ? ORDER BY o.data_entrada DESC";
+
+        List<RelatorioOrdem> lista = new ArrayList<>();
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement pst = con.prepareStatement(sql)) {
+
+            pst.setString(1, statusFiltro);
+            try (ResultSet rs = pst.executeQuery()) {
+                while (rs.next()) {
+                    RelatorioOrdem r = new RelatorioOrdem();
+                    r.setOrdemId(rs.getInt("ordem_id"));
+                    r.setClienteNome(rs.getString("cliente_nome"));
+                    r.setServicoNome(rs.getString("servico_nome"));
+                    r.setDispositivoModelo(rs.getString("dispositivo_modelo"));
+                    r.setStatus(rs.getString("status"));
+                    r.setValorTotal(rs.getDouble("valor_total"));
+                    r.setDataEntrada(rs.getTimestamp("data_entrada"));
+                    lista.add(r);
+                }
+            }
+        }
+        return lista;
+    }
+
 }

@@ -41,15 +41,16 @@ public class ClienteDAO {
              PreparedStatement pst = con.prepareStatement(sql)) {
 
             pst.setInt(1, id);
+
             try (ResultSet rs = pst.executeQuery()) {
                 if (rs.next()) {
-                    Cliente c = mapRowToCliente(rs);
-                    return c;
+                    return mapRowToCliente(rs);
                 }
             }
         }
         return null;
     }
+
 
     // UPDATE
     public boolean atualizar(Cliente c) throws SQLException {
@@ -129,4 +130,6 @@ public class ClienteDAO {
         }
         return c;
     }
+    
+    
 }
