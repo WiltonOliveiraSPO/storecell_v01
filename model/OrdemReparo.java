@@ -16,6 +16,25 @@ public class OrdemReparo {
     private String status;
     private double valorTotal;
     private String observacoes;
+    private String nomeCliente;
+    
+    
+    public String getNomeCliente() {
+		return nomeCliente;
+	}
+
+	public void setNomeCliente(String nomeCliente) {
+		this.nomeCliente = nomeCliente;
+	}
+
+	public String getNomeServico() {
+		return nomeServico;
+	}
+
+	public void setNomeServico(String nomeServico) {
+		this.nomeServico = nomeServico;
+	}
+	private String nomeServico;
 
     public OrdemReparo() {}
 

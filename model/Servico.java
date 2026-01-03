@@ -1,5 +1,7 @@
 package model;
 
+import java.math.BigDecimal;
+
 public class Servico {
 
     private int id;                     // servico_id
@@ -60,4 +62,10 @@ public class Servico {
     public void setTempoEstimadoHoras(double tempoEstimadoHoras) {
         this.tempoEstimadoHoras = tempoEstimadoHoras;
     }
+    
+    @Override
+    public String toString() {
+        return nome; // ou: nome + " - R$ " + valor
+    }
+
 }
