@@ -1,10 +1,16 @@
 package view;
 
 import dao.DBConnection;
+import java.util.List;
+
+import javax.swing.text.NumberFormatter;
+import java.text.DecimalFormat;
+
 import dao.OrdemReparoDAO;
 import dao.ClienteDAO;
 import dao.ServicoDAO;
 import model.OrdemReparo;
+import model.OrdemReparoView;
 import model.Cliente;
 import model.Servico;
 
@@ -21,15 +27,22 @@ public class FrmOrdemReparo extends JFrame {
     private JComboBox<Cliente> cbClientes;
     private JComboBox<Servico> cbServicos;
 
-    private JTextField txtId, txtModelo, txtValor, txtDataPrev, txtDataConc;
+    private JFormattedTextField txtValor;
+    private JTextField txtId, txtModelo, txtDataPrev, txtDataConc;
     private JTextArea txtProblema, txtObs;
     private JComboBox<String> cbStatus;
 
     private JTable tabela;
     private DefaultTableModel modelo;
-    private OrdemReparoDAO dao;
+    private OrdemReparoDAO dao;    
+    
+    // ===== Controle de navegação =====
+    private int indiceAtual = -1;
+    private List<OrdemReparoView> listaOrdem;
+
 
     public FrmOrdemReparo() {
+    	
 
         setTitle("Ordens de Reparo");
         setSize(900, 650);
@@ -95,9 +108,20 @@ public class FrmOrdemReparo extends JFrame {
         lblValor.setBounds(20, 180, 60, 25);
         add(lblValor);
 
-        txtValor = new JTextField();
+        DecimalFormat formato = new DecimalFormat("#,##0.00");
+        formato.setMinimumFractionDigits(2);
+        formato.setMaximumFractionDigits(2);
+
+        NumberFormatter formatter = new NumberFormatter(formato);
+        formatter.setValueClass(Double.class);
+        formatter.setAllowsInvalid(false);
+        formatter.setMinimum(0.0);
+
+        txtValor = new JFormattedTextField(formatter);
         txtValor.setBounds(80, 180, 100, 25);
+        txtValor.setValue(0.00);
         add(txtValor);
+
 
         JLabel lblDataPrev = new JLabel("Previsão:");
         lblDataPrev.setBounds(200, 180, 80, 25);
@@ -133,28 +157,65 @@ public class FrmOrdemReparo extends JFrame {
         sp2.setBounds(20, 370, 550, 80);
         add(sp2);
 
+        JButton btnNovo = new JButton("Nova Ordem");
+        btnNovo.setBounds(20, 470, 120, 30);
+        btnNovo.addActionListener(e -> novaOrdem());
+        add(btnNovo);
+
         JButton btnSalvar = new JButton("Salvar");
-        btnSalvar.setBounds(20, 470, 100, 30);
+        btnSalvar.setBounds(150, 470, 100, 30);
         btnSalvar.addActionListener(e -> salvar());
         add(btnSalvar);
 
-        JButton btnLimpar = new JButton("Limpar");
-        btnLimpar.setBounds(130, 470, 100, 30);
-        btnLimpar.addActionListener(e -> limparCampos());
-        add(btnLimpar);
+        JButton btnAtualizar = new JButton("Atualizar");
+        btnAtualizar.setBounds(260, 470, 100, 30);
+        btnAtualizar.addActionListener(e -> atualizar());
+        add(btnAtualizar);
 
         JButton btnExcluir = new JButton("Excluir");
-        btnExcluir.setBounds(240, 470, 100, 30);
+        btnExcluir.setBounds(370, 470, 100, 30);
         btnExcluir.addActionListener(e -> excluir());
         add(btnExcluir);
 
+        JButton btnPdf = new JButton("Gerar PDF");
+        btnPdf.setBounds(480, 470, 120, 30);
+        btnPdf.addActionListener(e -> gerarPDF());
+        add(btnPdf);
+        
+        JButton btnPrimeiro = new JButton("|<");
+        JButton btnAnterior = new JButton("<");
+        JButton btnProximo  = new JButton(">");
+        JButton btnUltimo   = new JButton(">|");
+
+        btnPrimeiro.addActionListener(e -> primeiro());
+        btnAnterior.addActionListener(e -> anterior());
+        btnProximo.addActionListener(e -> proximo());
+        btnUltimo.addActionListener(e -> ultimo());
+
+        JPanel painelBotoes = new JPanel();
+        painelBotoes.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        painelBotoes.setBounds(20, 520, 850, 40);
+
+        painelBotoes.add(btnPrimeiro);
+        painelBotoes.add(btnAnterior);
+        painelBotoes.add(btnProximo);
+        painelBotoes.add(btnUltimo);
+        painelBotoes.add(btnNovo);
+        painelBotoes.add(btnSalvar);
+        painelBotoes.add(btnAtualizar);
+        painelBotoes.add(btnExcluir);
+        painelBotoes.add(btnPdf);
+
+        add(painelBotoes);
+
+
         modelo = new DefaultTableModel(new Object[]{
-                "ID", "Cliente", "Serviço", "Modelo", "Status", "Valor", "Entrada"
-        }, 0);
+        	    "ID", "Cliente", "Serviço", "Modelo", "Status", "Valor", "Entrada"
+        	}, 0);
 
         tabela = new JTable(modelo);
         JScrollPane spTabela = new JScrollPane(tabela);
-        spTabela.setBounds(580, 20, 300, 550);
+        spTabela.setBounds(580, 20, 300, 450);
         add(spTabela);
 
         tabela.addMouseListener(new MouseAdapter() {
@@ -166,7 +227,51 @@ public class FrmOrdemReparo extends JFrame {
         listar();
     }
 
-    private void carregarClientes(Connection conn) {
+    private void novaOrdem() {
+
+        ordemAtual = new OrdemReparo(); // 🔥 ESSENCIAL
+
+        txtId.setText("");
+
+        cbClientes.setSelectedIndex(0);
+        cbServicos.setSelectedIndex(0);
+
+        txtModelo.setText("");
+        txtValor.setValue(0.00);
+
+        txtDataPrev.setText("");
+        txtDataConc.setText("");
+
+        txtProblema.setText("");
+        txtObs.setText("");
+
+        cbStatus.setSelectedItem("Aberto");
+
+        txtModelo.requestFocus();
+    }
+    
+    private OrdemReparo ordemAtual;
+
+    private void btnNovaOrdemActionPerformed(java.awt.event.ActionEvent evt) {
+
+        ordemAtual = new OrdemReparo(); // 🔴 ESSENCIAL
+
+        txtId.setText("");
+        txtModelo.setText("");
+        txtValor.setText("0,00");
+        txtProblema.setText("");
+        txtObs.setText("");
+        txtDataPrev.update(null);
+        txtDataConc.update(null);
+
+        //cbStatusc.setSelectedIndex(0);
+        cbClientes.setSelectedIndex(-1);
+        cbServicos.setSelectedIndex(-1);
+    }
+
+
+
+	private void carregarClientes(Connection conn) {
         try {
             ClienteDAO cdao = new ClienteDAO();
             for (Cliente c : cdao.listarTodos()) {
@@ -189,43 +294,51 @@ public class FrmOrdemReparo extends JFrame {
     }
 
     private void salvar() {
+
+        if (ordemAtual == null) {
+            JOptionPane.showMessageDialog(this,
+                "Clique em 'Nova Ordem' antes de salvar.",
+                "Atenção", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        Cliente cliente = (Cliente) cbClientes.getSelectedItem();
+        Servico servico = (Servico) cbServicos.getSelectedItem();
+
+        if (cliente == null || servico == null) {
+            JOptionPane.showMessageDialog(this,
+                "Cliente e Serviço são obrigatórios.",
+                "Validação", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        ordemAtual.setClienteId(cliente.getClienteId());
+        ordemAtual.setServicoId(servico.getId());
+        ordemAtual.setDispositivoModelo(txtModelo.getText());
+        ordemAtual.setStatus(cbStatus.getSelectedItem().toString());
+        ordemAtual.setValorTotal(((Number) txtValor.getValue()).doubleValue());
+        ordemAtual.setProblemaRelatado(txtProblema.getText());
+        ordemAtual.setObservacoes(txtObs.getText());
+
         try {
-            OrdemReparo o = new OrdemReparo();
-
-            if (!txtId.getText().isEmpty())
-                o.setId(Integer.parseInt(txtId.getText()));
-
-            Cliente cliente = (Cliente) cbClientes.getSelectedItem();
-            Servico servico = (Servico) cbServicos.getSelectedItem();
-
-            o.setClienteId(cliente.getClienteId());
-            o.setServicoId(servico.getId());
-            o.setDispositivoModelo(txtModelo.getText());
-            o.setProblemaRelatado(txtProblema.getText());
-            o.setStatus(cbStatus.getSelectedItem().toString());
-            o.setValorTotal(Double.parseDouble(txtValor.getText()));
-            o.setObservacoes(txtObs.getText());
-
-            o.setDataPrevisaoEntrega(java.sql.Date.valueOf(txtDataPrev.getText()));
-
-            if (!txtDataConc.getText().isEmpty())
-                o.setDataConclusao(java.sql.Date.valueOf(txtDataConc.getText()));
-
-            if (txtId.getText().isEmpty())
-                dao.inserir(o);
-            else
-                dao.atualizar(o);
-
+            dao.inserir(ordemAtual);
+            JOptionPane.showMessageDialog(this, "Ordem de Serviço salva com sucesso!");
             listar();
-            limparCampos();
-            JOptionPane.showMessageDialog(this, "Ordem salva!");
-
+            novaOrdem(); // limpa e prepara nova
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Erro salvar: " + e.getMessage());
+            JOptionPane.showMessageDialog(this,
+                "Erro ao salvar: " + e.getMessage(),
+                "Erro", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
         }
     }
 
-    private void excluir() {
+    private double parseValor(String text) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	private void excluir() {
         if (txtId.getText().isEmpty()) {
             JOptionPane.showMessageDialog(this, "Selecione uma ordem!");
             return;
@@ -243,25 +356,39 @@ public class FrmOrdemReparo extends JFrame {
     private void listar() {
         try {
             modelo.setRowCount(0);
-            for (OrdemReparo o : dao.listar()) {
+            listaOrdem = dao.listarComJoin();
+
+            for (OrdemReparoView v : listaOrdem) {
                 modelo.addRow(new Object[]{
-                        o.getId(), o.getClienteId(), o.getServicoId(),
-                        o.getDispositivoModelo(), o.getStatus(),
-                        o.getValorTotal(), o.getDataEntrada()
+                    v.getId(),
+                    v.getCliente(),
+                    v.getServico(),
+                    v.getModelo(),
+                    v.getStatus(),
+                    String.format("R$ %.2f", v.getValor()),
+                    v.getDataEntrada()
                 });
             }
+
+            indiceAtual = listaOrdem.isEmpty() ? -1 : 0;
+
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Erro listar: " + e.getMessage());
         }
     }
+
 
     private void carregarCamposDaTabela() {
         int row = tabela.getSelectedRow();
 
         txtId.setText(modelo.getValueAt(row, 0).toString());
         txtModelo.setText(modelo.getValueAt(row, 3).toString());
-        txtValor.setText(modelo.getValueAt(row, 4).toString());
+        txtValor.setText(modelo.getValueAt(row, 5).toString());
+
+        cbStatus.setSelectedItem(modelo.getValueAt(row, 4).toString());
     }
+
+
 
     private void limparCampos() {
         txtId.setText("");
@@ -272,4 +399,99 @@ public class FrmOrdemReparo extends JFrame {
         txtProblema.setText("");
         txtObs.setText("");
     }
+    
+    private void gerarPDF() {
+        if (txtId.getText().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Selecione uma ordem!");
+            return;
+        }
+
+        try {
+            OrdemReparo ordem = dao.buscarPorId(Integer.parseInt(txtId.getText()));
+
+            Cliente cliente = (Cliente) cbClientes.getSelectedItem();
+            Servico servico = (Servico) cbServicos.getSelectedItem();
+
+            util.OrdemServicoPDF.gerar(ordem, cliente, servico);
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Erro ao gerar PDF: " + e.getMessage());
+        }
+    }
+    
+    
+    private void atualizar() {
+        if (txtId.getText().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Selecione uma ordem para atualizar.");
+            return;
+        }
+
+        try {
+            OrdemReparo o = montarObjeto();
+            o.setId(Integer.parseInt(txtId.getText()));
+
+            dao.atualizar(o);
+            listar();
+            JOptionPane.showMessageDialog(this, "Ordem atualizada!");
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Erro atualizar: " + e.getMessage());
+        }
+    }
+
+    private OrdemReparo montarObjeto() {
+        OrdemReparo o = new OrdemReparo();
+
+        Cliente cliente = (Cliente) cbClientes.getSelectedItem();
+        Servico servico = (Servico) cbServicos.getSelectedItem();
+
+        o.setClienteId(cliente.getClienteId());
+        o.setServicoId(servico.getId());
+        o.setDispositivoModelo(txtModelo.getText());
+        o.setProblemaRelatado(txtProblema.getText());
+        o.setStatus(cbStatus.getSelectedItem().toString());
+        o.setValorTotal(((Number) txtValor.getValue()).doubleValue());
+        o.setObservacoes(txtObs.getText());
+
+        o.setDataPrevisaoEntrega(java.sql.Date.valueOf(txtDataPrev.getText()));
+
+        if (!txtDataConc.getText().isEmpty()) {
+            o.setDataConclusao(java.sql.Date.valueOf(txtDataConc.getText()));
+        }
+
+        return o;
+    }
+
+
+    private void primeiro() {
+        if (listaOrdem.isEmpty()) return;
+        indiceAtual = 0;
+        selecionarLinha();
+    }
+
+    private void anterior() {
+        if (indiceAtual > 0) {
+            indiceAtual--;
+            selecionarLinha();
+        }
+    }
+
+    private void proximo() {
+        if (indiceAtual < listaOrdem.size() - 1) {
+            indiceAtual++;
+            selecionarLinha();
+        }
+    }
+
+    private void ultimo() {
+        if (!listaOrdem.isEmpty()) {
+            indiceAtual = listaOrdem.size() - 1;
+            selecionarLinha();
+        }
+    }
+
+    private void selecionarLinha() {
+        tabela.setRowSelectionInterval(indiceAtual, indiceAtual);
+        carregarCamposDaTabela();
+    }
+
 }
