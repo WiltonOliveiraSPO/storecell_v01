@@ -19,7 +19,7 @@ public class ProdutoDAO {
     // ==============================
     public boolean inserir(Produto p) {
         String sql = "INSERT INTO produtos (nome, descricao, preco_custo, preco_venda, quantidade_estoque, codigo_barras) "
-                   + "VALUES (?, ?, ?, ?, ?, ?)";
+                + "VALUES (?, ?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, p.getNome());
@@ -43,7 +43,7 @@ public class ProdutoDAO {
     // ==============================
     public boolean atualizar(Produto p) {
         String sql = "UPDATE produtos SET nome=?, descricao=?, preco_custo=?, preco_venda=?, "
-                   + "quantidade_estoque=?, codigo_barras=? WHERE produto_id=?";
+                + "quantidade_estoque=?, codigo_barras=? WHERE produto_id=?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, p.getNome());
@@ -87,7 +87,7 @@ public class ProdutoDAO {
         String sql = "SELECT * FROM produtos ORDER BY nome";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
+                ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
                 Produto p = new Produto();
@@ -140,42 +140,62 @@ public class ProdutoDAO {
         return null;
     }
 
-	public Produto buscarPorNomeOuCodigo(String busca) {
-    try {
-        String sql;
+    public Produto buscarPorNomeOuCodigo(String termo) throws SQLException {
+        String sql = """
+            SELECT produto_id, nome, preco_venda, quantidade_estoque
+            FROM produtos
+            WHERE nome LIKE ? OR codigo_barras = ?
+            LIMIT 1
+        """;
 
-        // Verifica se é número (busca por ID)
-        if (busca.matches("\\d+")) {
-            sql = "SELECT * FROM produtos WHERE id = ?";
-        } else {
-            sql = "SELECT * FROM produtos WHERE nome LIKE ?";
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setString(1, "%" + termo + "%");
+            pst.setString(2, termo);
+
+            try (ResultSet rs = pst.executeQuery()) {
+                if (rs.next()) {
+                    Produto p = new Produto();
+                    p.setProdutoId(rs.getInt("produto_id"));
+                    p.setNome(rs.getString("nome"));
+                    p.setPrecoVenda(rs.getDouble("preco_venda"));
+                    p.setQuantidadeEstoque(rs.getInt("quantidade_estoque"));
+                    return p;
+                }
+            }
         }
-
-        PreparedStatement stmt = conn.prepareStatement(sql);
-
-        if (busca.matches("\\d+")) {
-            stmt.setInt(1, Integer.parseInt(busca));
-        } else {
-            stmt.setString(1, "%" + busca + "%");
-        }
-
-        ResultSet rs = stmt.executeQuery();
-
-        if (rs.next()) {
-            Produto p = new Produto();
-            p.setProdutoId(rs.getInt("id"));
-            p.setNome(rs.getString("nome"));
-            p.setPrecoVenda(rs.getDouble("preco_venda"));
-            // adicione outros campos se existirem
-            return p;
-        }
-
-        return null;
-
-    } catch (Exception e) {
-        e.printStackTrace();
         return null;
     }
-}
+
+    
+    public int buscarEstoque(int produtoId) throws SQLException {
+        String sql = "SELECT quantidade_estoque FROM produtos WHERE produto_id = ?";
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setInt(1, produtoId);
+            try (ResultSet rs = pst.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("quantidade_estoque");
+                }
+            }
+        }
+        return 0;
+    }
+
+    public void baixarEstoque(int produtoId, int quantidade) throws SQLException {
+        String sql = "UPDATE produtos SET quantidade_estoque = quantidade_estoque - ? " +
+                     "WHERE produto_id = ? AND quantidade_estoque >= ?";
+
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setInt(1, quantidade);
+            pst.setInt(2, produtoId);
+            pst.setInt(3, quantidade);
+
+            int linhas = pst.executeUpdate();
+
+            if (linhas == 0) {
+                throw new SQLException("Estoque insuficiente para o produto ID: " + produtoId);
+            }
+        }
+    }
+
 
 }
