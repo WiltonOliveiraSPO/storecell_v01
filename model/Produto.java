@@ -10,22 +10,10 @@ public class Produto {
     private int quantidadeEstoque;
     private String codigoBarras;
 
-    public Produto() {}
-
-    public Produto(int produtoId, String nome, String descricao, double precoCusto,
-                   double precoVenda, int quantidadeEstoque, String codigoBarras) {
-        this.produtoId = produtoId;
-        this.nome = nome;
-        this.descricao = descricao;
-        this.precoCusto = precoCusto;
-        this.precoVenda = precoVenda;
-        this.quantidadeEstoque = quantidadeEstoque;
-        this.codigoBarras = codigoBarras;
-    }
-
     public int getProdutoId() {
         return produtoId;
     }
+
     public void setProdutoId(int produtoId) {
         this.produtoId = produtoId;
     }
@@ -33,6 +21,7 @@ public class Produto {
     public String getNome() {
         return nome;
     }
+
     public void setNome(String nome) {
         this.nome = nome;
     }
@@ -40,6 +29,7 @@ public class Produto {
     public String getDescricao() {
         return descricao;
     }
+
     public void setDescricao(String descricao) {
         this.descricao = descricao;
     }
@@ -47,6 +37,7 @@ public class Produto {
     public double getPrecoCusto() {
         return precoCusto;
     }
+
     public void setPrecoCusto(double precoCusto) {
         this.precoCusto = precoCusto;
     }
@@ -54,6 +45,7 @@ public class Produto {
     public double getPrecoVenda() {
         return precoVenda;
     }
+
     public void setPrecoVenda(double precoVenda) {
         this.precoVenda = precoVenda;
     }
@@ -61,6 +53,7 @@ public class Produto {
     public int getQuantidadeEstoque() {
         return quantidadeEstoque;
     }
+
     public void setQuantidadeEstoque(int quantidadeEstoque) {
         this.quantidadeEstoque = quantidadeEstoque;
     }
@@ -68,8 +61,8 @@ public class Produto {
     public String getCodigoBarras() {
         return codigoBarras;
     }
+
     public void setCodigoBarras(String codigoBarras) {
         this.codigoBarras = codigoBarras;
     }
-
 }
