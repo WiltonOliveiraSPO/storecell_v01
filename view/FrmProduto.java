@@ -1,17 +1,13 @@
 package view;
 
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-
+import controller.ProdutoController;
 import dao.DBConnection;
 import dao.ProdutoDAO;
 import model.Produto;
 
-import java.awt.*;
+import javax.swing.*;
 import java.awt.event.*;
 import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.List;
 
 public class FrmProduto extends JFrame {
 
@@ -19,145 +15,111 @@ public class FrmProduto extends JFrame {
     private JTextArea txtDescricao;
     private JTable tabela;
 
-    private ProdutoDAO dao;
+    private ProdutoController controller;
 
-    public FrmProduto() throws SQLException {
-
-        // Configuração da tela
+    public FrmProduto() {
         setTitle("Cadastro de Produtos");
-        setSize(850, 650);
+        setSize(880, 650);
         setLocationRelativeTo(null);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setLayout(null);
 
-        // Conexão
-        Connection conn = DBConnection.getConnection();
-        dao = new ProdutoDAO(conn);
+        try {
+            Connection conn = DBConnection.getConnection();
+            ProdutoDAO dao = new ProdutoDAO(conn);
+            controller = new ProdutoController(dao);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Erro conexão: " + e.getMessage());
+            dispose();
+            return;
+        }
 
-        // Labels & Campos
-        JLabel lblId = new JLabel("ID:");
-        lblId.setBounds(20, 20, 30, 25);
-        add(lblId);
-
-        txtId = new JTextField();
-        txtId.setBounds(50, 20, 80, 25);
+        // ===== CAMPOS =====
+        txtId = campo(20, 20, 80);
         txtId.setEditable(false);
-        add(txtId);
 
-        JLabel lblNome = new JLabel("Nome:");
-        lblNome.setBounds(150, 20, 80, 25);
-        add(lblNome);
-
-        txtNome = new JTextField();
-        txtNome.setBounds(210, 20, 300, 25);
-        add(txtNome);
-
-        JLabel lblPrecoCusto = new JLabel("Preço Custo:");
-        lblPrecoCusto.setBounds(20, 60, 100, 25);
-        add(lblPrecoCusto);
-
-        txtPrecoCusto = new JTextField();
-        txtPrecoCusto.setBounds(120, 60, 100, 25);
-        add(txtPrecoCusto);
-
-        JLabel lblPrecoVenda = new JLabel("Preço Venda:");
-        lblPrecoVenda.setBounds(230, 60, 100, 25);
-        add(lblPrecoVenda);
-
-        txtPrecoVenda = new JTextField();
-        txtPrecoVenda.setBounds(330, 60, 100, 25);
-        add(txtPrecoVenda);
-
-        JLabel lblEstoque = new JLabel("Estoque:");
-        lblEstoque.setBounds(450, 60, 100, 25);
-        add(lblEstoque);
-
-        txtEstoque = new JTextField();
-        txtEstoque.setBounds(520, 60, 80, 25);
-        add(txtEstoque);
-
-        JLabel lblCodigoBarras = new JLabel("Código de Barras:");
-        lblCodigoBarras.setBounds(20, 100, 150, 25);
-        add(lblCodigoBarras);
-
-        txtCodigoBarras = new JTextField();
-        txtCodigoBarras.setBounds(150, 100, 200, 25);
-        add(txtCodigoBarras);
-
-        JLabel lblDescricao = new JLabel("Descrição:");
-        lblDescricao.setBounds(20, 140, 100, 25);
-        add(lblDescricao);
+        txtNome = campo(120, 20, 300);
+        txtPrecoCusto = campo(20, 60, 100);
+        txtPrecoVenda = campo(140, 60, 100);
+        txtEstoque = campo(260, 60, 80);
+        txtCodigoBarras = campo(20, 100, 200);
 
         txtDescricao = new JTextArea();
-        JScrollPane scrollDesc = new JScrollPane(txtDescricao);
-        scrollDesc.setBounds(20, 170, 580, 100);
-        add(scrollDesc);
+        JScrollPane sp = new JScrollPane(txtDescricao);
+        sp.setBounds(20, 140, 580, 100);
+        add(sp);
 
-        // Botões
-        JButton btnNovo = new JButton("Novo");
-        btnNovo.setBounds(620, 20, 120, 30);
-        add(btnNovo);
+        // ===== BOTÕES =====
+        JButton btnNovo = botao("+", 620, 20);
+        JButton btnSalvar = botao("💾", 680, 20);
+        JButton btnAtualizar = botao("✏", 740, 20);
+        JButton btnExcluir = botao("🗑", 800, 20);
 
-        JButton btnSalvar = new JButton("Salvar");
-        btnSalvar.setBounds(620, 60, 120, 30);
-        add(btnSalvar);
+        JButton btnPrimeiro = botao("|<", 620, 60);
+        JButton btnAnterior = botao("<", 680, 60);
+        JButton btnProximo = botao(">", 740, 60);
+        JButton btnUltimo = botao(">|", 800, 60);
 
-        JButton btnExcluir = new JButton("Excluir");
-        btnExcluir.setBounds(620, 100, 120, 30);
-        add(btnExcluir);
-
-        // Tabela
+        // ===== TABELA =====
         tabela = new JTable();
         JScrollPane scroll = new JScrollPane(tabela);
-        scroll.setBounds(20, 300, 800, 300);
+        scroll.setBounds(20, 270, 830, 330);
         add(scroll);
 
-        carregarTabela();
+        controller.carregarTabela(tabela);
 
-        // AÇÕES
-        btnNovo.addActionListener(e -> limparCampos());
+        // ===== AÇÕES =====
+        btnNovo.addActionListener(e -> limpar());
 
-        btnSalvar.addActionListener(e -> salvar());
+        btnSalvar.addActionListener(e -> {
+            controller.inserir(montar());
+            controller.carregarTabela(tabela);
+            limpar();
+        });
 
-        btnExcluir.addActionListener(e -> excluir());
+        btnAtualizar.addActionListener(e -> {
+            controller.atualizar(montar());
+            controller.carregarTabela(tabela);
+        });
+
+        btnExcluir.addActionListener(e -> {
+            controller.excluir(Integer.parseInt(txtId.getText()));
+            controller.carregarTabela(tabela);
+            limpar();
+        });
 
         tabela.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent e) {
-                carregarSelecionado();
+                Produto p = controller.getProdutoSelecionado(tabela.getSelectedRow());
+                carregar(p);
             }
         });
+
+        btnPrimeiro.addActionListener(e -> carregar(controller.navegarPrimeiro()));
+        btnAnterior.addActionListener(e -> carregar(controller.navegarAnterior()));
+        btnProximo.addActionListener(e -> carregar(controller.navegarProximo()));
+        btnUltimo.addActionListener(e -> carregar(controller.navegarUltimo()));
     }
 
-    private void carregarTabela() {
-        List<Produto> lista = dao.listarTodos();
-
-        DefaultTableModel modelo = new DefaultTableModel(
-                new Object[]{"ID", "Nome", "Preço Venda", "Estoque"}, 0);
-
-        for (Produto p : lista) {
-            modelo.addRow(new Object[]{
-                    p.getProdutoId(),
-                    p.getNome(),
-                    p.getPrecoVenda(),
-                    p.getQuantidadeEstoque()
-            });
-        }
-
-        tabela.setModel(modelo);
+    // ===== MÉTODOS AUX =====
+    private JTextField campo(int x, int y, int w) {
+        JTextField t = new JTextField();
+        t.setBounds(x, y, w, 25);
+        add(t);
+        return t;
     }
 
-    private void limparCampos() {
-        txtId.setText("");
-        txtNome.setText("");
-        txtPrecoCusto.setText("");
-        txtPrecoVenda.setText("");
-        txtEstoque.setText("");
-        txtCodigoBarras.setText("");
-        txtDescricao.setText("");
+    private JButton botao(String txt, int x, int y) {
+        JButton b = new JButton(txt);
+        b.setBounds(x, y, 50, 30);
+        add(b);
+        return b;
     }
 
-    private void salvar() {
+    private Produto montar() {
         Produto p = new Produto();
+        if (!txtId.getText().isEmpty())
+            p.setProdutoId(Integer.parseInt(txtId.getText()));
 
         p.setNome(txtNome.getText());
         p.setDescricao(txtDescricao.getText());
@@ -165,41 +127,12 @@ public class FrmProduto extends JFrame {
         p.setPrecoVenda(Double.parseDouble(txtPrecoVenda.getText()));
         p.setQuantidadeEstoque(Integer.parseInt(txtEstoque.getText()));
         p.setCodigoBarras(txtCodigoBarras.getText());
-
-        if (txtId.getText().isEmpty()) {
-            dao.inserir(p);
-            JOptionPane.showMessageDialog(this, "Produto cadastrado!");
-        } else {
-            p.setProdutoId(Integer.parseInt(txtId.getText()));
-            dao.atualizar(p);
-            JOptionPane.showMessageDialog(this, "Produto atualizado!");
-        }
-
-        carregarTabela();
-        limparCampos();
+        return p;
     }
 
-    private void excluir() {
-        if (txtId.getText().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Selecione um produto!");
-            return;
-        }
-
-        dao.excluir(Integer.parseInt(txtId.getText()));
-        JOptionPane.showMessageDialog(this, "Produto excluído!");
-
-        carregarTabela();
-        limparCampos();
-    }
-
-    private void carregarSelecionado() {
-        int row = tabela.getSelectedRow();
-        if (row < 0) return;
-
-        txtId.setText(tabela.getValueAt(row, 0).toString());
-
-        Produto p = dao.buscarPorId(Integer.parseInt(txtId.getText()));
-
+    private void carregar(Produto p) {
+        if (p == null) return;
+        txtId.setText(String.valueOf(p.getProdutoId()));
         txtNome.setText(p.getNome());
         txtDescricao.setText(p.getDescricao());
         txtPrecoCusto.setText(String.valueOf(p.getPrecoCusto()));
@@ -207,28 +140,14 @@ public class FrmProduto extends JFrame {
         txtEstoque.setText(String.valueOf(p.getQuantidadeEstoque()));
         txtCodigoBarras.setText(p.getCodigoBarras());
     }
-    
- // dentro da classe FrmProdutos
-    public void carregarProduto(int produtoId) {
-        try {
-            Connection conn = DBConnection.getConnection();
-            ProdutoDAO dao = new ProdutoDAO(conn);
-            Produto p = dao.buscarPorId(produtoId); // implemente buscarPorId se necessário
 
-            if (p != null) {
-                txtId.setText(String.valueOf(p.getProdutoId()));
-                txtNome.setText(p.getNome());
-                txtDescricao.setText(p.getDescricao());
-                txtPrecoCusto.setText(String.valueOf(p.getPrecoCusto()));
-                txtPrecoVenda.setText(String.valueOf(p.getPrecoVenda()));
-                txtEstoque.setText(String.valueOf(p.getQuantidadeEstoque()));
-                txtCodigoBarras.setText(p.getCodigoBarras());
-            } else {
-                JOptionPane.showMessageDialog(this, "Produto não encontrado!");
-            }
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Erro ao carregar produto: " + e.getMessage());
-        }
+    private void limpar() {
+        txtId.setText("");
+        txtNome.setText("");
+        txtDescricao.setText("");
+        txtPrecoCusto.setText("");
+        txtPrecoVenda.setText("");
+        txtEstoque.setText("");
+        txtCodigoBarras.setText("");
     }
-
 }
